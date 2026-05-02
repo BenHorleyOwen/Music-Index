@@ -1,6 +1,8 @@
 [submodule "Music-Server"]
 	path = Music-Server
-	url = .\\Music-Server\\
+	url = git@github.com:BenHorleyOwen/Music-Server.git
+	branch = main
 [submodule "Karaoke"]
 	path = Karaoke
-	url = .\\Karaoke\\
+	url = git@github.com:BenHorleyOwen/Karaoke.git
+	branch = main
