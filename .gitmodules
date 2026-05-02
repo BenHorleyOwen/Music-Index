@@ -1,0 +1,6 @@
+[submodule "Music-Server"]
+	path = Music-Server
+	url = .\\Music-Server\\
+[submodule "Karaoke"]
+	path = Karaoke
+	url = .\\Karaoke\\
