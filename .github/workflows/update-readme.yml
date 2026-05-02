@@ -1,0 +1,86 @@
+name: Update README with Submodule Links
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Generate submodule links and update README
+        run: |
+          python3 << 'EOF'
+          import subprocess
+          import re
+
+          # Parse .gitmodules to get submodule names and paths
+          result = subprocess.run(
+              ["git", "config", "--file", ".gitmodules", "--get-regexp", "submodule\\..*\\.url"],
+              capture_output=True, text=True
+          )
+
+          submodules = []
+          for line in result.stdout.strip().splitlines():
+              key, url = line.split(None, 1)
+              # Extract name from key: submodule.<name>.url
+              name = key.split(".")[1]
+              # Convert SSH URL to HTTPS if needed
+              url = url.strip()
+              if url.startswith("git@github.com:"):
+                  url = url.replace("git@github.com:", "https://github.com/").removesuffix(".git")
+              elif url.endswith(".git"):
+                  url = url.removesuffix(".git")
+              submodules.append((name, url))
+
+          if not submodules:
+              print("No submodules found.")
+              exit(0)
+
+          # Build the markdown block
+          lines = ["## Submodules\n"]
+          for name, url in sorted(submodules):
+              lines.append(f"- [{name}]({url})")
+          block = "\n".join(lines) + "\n"
+
+          # Read existing README
+          try:
+              with open("README.md", "r") as f:
+                  content = f.read()
+          except FileNotFoundError:
+              content = "# Index\n"
+
+          # Replace existing submodules section or append
+          pattern = r"## Submodules\n[\s\S]*?(?=\n## |\Z)"
+          if re.search(pattern, content):
+              new_content = re.sub(pattern, block, content)
+          else:
+              new_content = content.rstrip() + "\n\n" + block
+
+          with open("README.md", "w") as f:
+              f.write(new_content)
+
+          print("README.md updated with submodule links:")
+          for name, url in submodules:
+              print(f"  - {name}: {url}")
+          EOF
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet README.md || (
+            git add README.md &&
+            git commit -m "chore: update submodule links in README [skip ci]" &&
+            git push
+          )
